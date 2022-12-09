@@ -282,4 +282,54 @@ router.post("/create-order", isAuth, async (req, res) => {
   }
 });
 
+router.put("/update-product/:id", isAuth, async (req, res) => {
+  const { id } = req.params;
+  const { title, price, description, image, category, rating, count } =
+    req.body;
+  try {
+    const { user } = req.body;
+    const userInDb = await prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+    });
+    if (!userInDb) {
+      return res.status(404).json({ message: "User not found" });
+    } else if (userInDb.isAdmin === false) {
+      return res.status(401).json({ message: "Unauthorized" });
+    } else {
+      const product = await prisma.product.update({
+        where: {
+          id,
+        },
+        data: {
+          title,
+          price,
+          description,
+          image,
+          Category: {
+            connectOrCreate: {
+              create: {
+                name: category,
+              },
+              where: {
+                name: category,
+              },
+            },
+          },
+          rating,
+          count,
+        },
+      });
+      res.status(200).json({
+        success: true,
+        message: "Product updated successfully",
+        product,
+      });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
 export default router;
